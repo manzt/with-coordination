@@ -44,6 +44,19 @@ with Coordination() as c:
 Alternatively, you can use use an existing configuration to create a coordination context.
 
 ```python
+with open("config.json", "w") as f:
+  f.write("""
+  {
+    "key": 1,
+    "coordinationSpace": { "sliderValue": { "A": 0.5, "B": 0.75 } },
+    "viewCoordination": {
+      "slider1": { "coordinationScopes": { "sliderValue": "A" } },
+      "slider2": { "coordinationScopes": { "sliderValue": "B" } },
+      "slider3": { "coordinationScopes": { "sliderValue": "B" } }
+    }
+  }
+  """)
+
 with Coordination("config.json") as c:
     c.use_widget(slider1, view_id="slider1", aliases={"value": "sliderValue"})
     c.use_widget(slider2, view_id="slider2", aliases={"value": "sliderValue"})
