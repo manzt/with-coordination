@@ -37,8 +37,6 @@ with Coordination("config.json") as c:
 ```
 """
 
-from __future__ import annotations
-
 import dataclasses
 import pathlib
 import typing
@@ -51,14 +49,14 @@ __all__ = ["Coordination"]
 
 
 class ViewCoordinationConfig(msgspec.Struct, rename="camel"):
-    coordination_scopes: dict[str, str] = {}
+    coordination_scopes: typing.Dict[str, str] = {}
 
 
 class CoordinationConfig(msgspec.Struct, rename="camel"):
     """The use-coordination configuration."""
 
-    coordination_space: dict[str, dict[str, typing.Any]] = {}
-    view_coordination: dict[str, ViewCoordinationConfig] = {}
+    coordination_space: typing.Dict[str, typing.Dict[str, typing.Any]] = {}
+    view_coordination: typing.Dict[str, ViewCoordinationConfig] = {}
 
 
 class CoordinationScope(msgspec.Struct):
@@ -69,7 +67,7 @@ class CoordinationScope(msgspec.Struct):
 
 class View(msgspec.Struct):
     widget: ipywidgets.Widget
-    aliases: dict[str, str] = {}
+    aliases: typing.Dict[str, str] = {}
 
     def alias(self, **kwargs):
         self.aliases.update({v: k for k, v in kwargs.items()})
@@ -77,7 +75,7 @@ class View(msgspec.Struct):
 
 
 def _resolve_scope_and_link(
-    config: CoordinationConfig, scope: CoordinationScope, views: dict[str, View]
+    config: CoordinationConfig, scope: CoordinationScope, views: typing.Dict[str, View]
 ):
     resolved: list[tuple[ipywidgets.Widget, str]] = []
     for view_name, view_config in config.view_coordination.items():
@@ -136,7 +134,7 @@ class Coordination:
         self._config = (
             CoordinationConfig() if config is None else _resolve_config(config)
         )
-        self._views: dict[str, View] = {}
+        self._views: typing.Dict[str, View] = {}
         self._unknown_view_id = 0
 
     def use_widget(
