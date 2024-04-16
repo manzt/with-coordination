@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  Lint:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: eifinger/setup-rye@v2
+        with:
+          enable-cache: true
+      - run: rye lint
+
+  Test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: |
+          pip install .
+          pip install pytest inline-snapshot
+      - name: Run tests
+        run: pytest ./tests --color=yes
