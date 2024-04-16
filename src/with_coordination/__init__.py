@@ -107,7 +107,7 @@ def _resolve_scope_and_link(
     return links
 
 
-WIDGET_COORDINATION_IDS: weakref.WeakKeyDictionary[ipywidgets.Widget, int] = (
+WIDGET_COORDINATION_IDS: "weakref.WeakKeyDictionary[ipywidgets.Widget, int]" = (
     weakref.WeakKeyDictionary()
 )
 # TODO: We should try to use weakrefs here as well
