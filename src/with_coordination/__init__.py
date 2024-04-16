@@ -37,7 +37,6 @@ with Coordination("config.json") as c:
 ```
 """
 
-import dataclasses
 import pathlib
 import typing
 import weakref
@@ -108,7 +107,9 @@ def _resolve_scope_and_link(
     return links
 
 
-WIDGET_COORDINATION_IDS = weakref.WeakKeyDictionary()
+WIDGET_COORDINATION_IDS: weakref.WeakKeyDictionary[ipywidgets.Widget, int] = (
+    weakref.WeakKeyDictionary()
+)
 # TODO: We should try to use weakrefs here as well
 LINKS = {}
 
@@ -151,7 +152,7 @@ class Coordination:
 
     def type(self, type: str) -> "CoordinationTypeContext":
         """Enter the coordination type context."""
-        return CoordinationTypeContext(_coord=self, _type=type)
+        return CoordinationTypeContext(coordination=self, type=type)
 
     def __enter__(self) -> "Coordination":
         """Enter the coordination context."""
@@ -198,10 +199,10 @@ class Coordination:
 T = typing.TypeVar("T")
 
 
-@dataclasses.dataclass
 class CoordinationTypeContext:
-    _coord: Coordination
-    _type: str
+    def __init__(self, coordination: Coordination, type: str):
+        self._coord = coordination
+        self._type = type
 
     def __enter__(self):
         """Enter the coordination type context."""
@@ -231,16 +232,16 @@ class CoordinationTypeContext:
         )
         self._coord._config.coordination_space[self._type][name] = value
         return CoordinationScopeContext(
-            _cood=self._coord, _type=self._type, _name=name, _value=value
+            coordination=self._coord, type=self._type, name=name, value=value
         )
 
 
-@dataclasses.dataclass
 class CoordinationScopeContext(typing.Generic[T]):
-    _cood: Coordination
-    _type: str
-    _name: str
-    _value: T
+    def __init__(self, coordination: Coordination, type: str, name: str, value: T):
+        self._coord = coordination
+        self._type = type
+        self._name = name
+        self._value = value
 
     def __enter__(self):
         """Enter the coordination scope context."""
@@ -284,20 +285,20 @@ class CoordinationScopeContext(typing.Generic[T]):
 
         if view_id is None:
             # Check if we have a for this widget already
-            for vid, view in self._cood._views.items():
+            for vid, view in self._coord._views.items():
                 if view.widget == widget:
                     view_id = vid
                     break
             else:
                 # If not, create a new one
-                view_id = f"view_{self._cood._unknown_view_id}"
-                self._cood._unknown_view_id += 1
+                view_id = f"view_{self._coord._unknown_view_id}"
+                self._coord._unknown_view_id += 1
 
         # write to the view coordination config
-        self._cood._config.view_coordination[view_id] = (
-            self._cood._config.view_coordination.get(view_id, ViewCoordinationConfig())
+        self._coord._config.view_coordination[view_id] = (
+            self._coord._config.view_coordination.get(view_id, ViewCoordinationConfig())
         )
-        self._cood._config.view_coordination[view_id].coordination_scopes[
+        self._coord._config.view_coordination[view_id].coordination_scopes[
             self._type
         ] = self._name
 
@@ -305,6 +306,6 @@ class CoordinationScopeContext(typing.Generic[T]):
             return
 
         # register the widget view
-        self._cood._views[view_id] = self._cood._views.get(view_id, View(widget))
+        self._coord._views[view_id] = self._coord._views.get(view_id, View(widget))
         if alias is not None:
-            self._cood._views[view_id].alias(**{alias: self._type})
+            self._coord._views[view_id].alias(**{alias: self._type})
