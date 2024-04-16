@@ -3,13 +3,11 @@
 #
 # last locked with the following flags:
 #   pre: false
-#   features: []
+#   features: ["dev"]
 #   all-features: false
 #   with-sources: false
 
 -e file:.
-anywidget==0.9.7
-    # via with-coordination
 asttokens==2.4.1
     # via stack-data
 comm==0.2.2
@@ -21,7 +19,6 @@ executing==2.0.1
 ipython==8.23.0
     # via ipywidgets
 ipywidgets==8.1.2
-    # via anywidget
     # via with-coordination
 jedi==0.19.1
     # via ipython
@@ -37,8 +34,6 @@ pexpect==4.9.0
     # via ipython
 prompt-toolkit==3.0.43
     # via ipython
-psygnal==0.11.0
-    # via anywidget
 ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.2
@@ -55,8 +50,6 @@ traitlets==5.14.2
     # via ipywidgets
     # via matplotlib-inline
     # via with-coordination
-typing-extensions==4.11.0
-    # via anywidget
 wcwidth==0.2.13
     # via prompt-toolkit
 widgetsnbextension==4.0.10

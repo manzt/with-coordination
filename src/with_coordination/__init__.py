@@ -1,6 +1,45 @@
+"""A module for declarative coordination of Jupyter Widgets.
+
+This module provides a class to coordinate Jupyter widgets with the declarative,
+use-coordination specification.
+
+Usage:
+
+```python
+import ipywidgets
+from with_coordination import Coordination
+
+slider1 = ipywidgets.FloatSlider(description="Slider 1")
+slider2 = ipywidgets.FloatSlider(description="Slider 2")
+slider3 = ipywidgets.FloatSlider(description="Slider 3")
+
+with Coordination() as c:
+    with c.type("sliderValue") as t:
+        with t.scope("A", 10) as s:
+            s.view(slider1, alias="value")
+
+        with t.scope("B", 4.0) as s:
+            s.view(slider2, alias="value")
+            s.view(slider3, alias="value")
+
+# The sliders are now linked together
+ipywidgets.VBox([slider1, slider2, slider3])
+```
+
+Alternatively, you can also load the configuration from a file and apply
+it to the widgets:
+
+```python
+with Coordination("config.json") as c:
+    c.use_widget(slider1, view_id"slider1", aliases={"value": "sliderValue"})
+    c.use_widget(slider2, view_id"slider2", aliases={"value": "sliderValue"})
+    c.use_widget(slider3, view_id"slider3", aliases={"value": "sliderValue"})
+```
+"""
+
+import dataclasses
 import pathlib
 import typing
-import dataclasses
 import weakref
 
 import ipywidgets
@@ -10,12 +49,14 @@ __all__ = ["Coordination"]
 
 
 class ViewCoordinationConfig(msgspec.Struct, rename="camel"):
-    coordination_scopes: dict[str, str] = {}
+    coordination_scopes: typing.Dict[str, str] = {}
 
 
 class CoordinationConfig(msgspec.Struct, rename="camel"):
-    coordination_space: dict[str, dict[str, typing.Any]] = {}
-    view_coordination: dict[str, ViewCoordinationConfig] = {}
+    """The use-coordination configuration."""
+
+    coordination_space: typing.Dict[str, typing.Dict[str, typing.Any]] = {}
+    view_coordination: typing.Dict[str, ViewCoordinationConfig] = {}
 
 
 class CoordinationScope(msgspec.Struct):
@@ -26,7 +67,7 @@ class CoordinationScope(msgspec.Struct):
 
 class View(msgspec.Struct):
     widget: ipywidgets.Widget
-    aliases: dict[str, str] = {}
+    aliases: typing.Dict[str, str] = {}
 
     def alias(self, **kwargs):
         self.aliases.update({v: k for k, v in kwargs.items()})
@@ -34,7 +75,7 @@ class View(msgspec.Struct):
 
 
 def _resolve_scope_and_link(
-    config: CoordinationConfig, scope: CoordinationScope, views: dict[str, View]
+    config: CoordinationConfig, scope: CoordinationScope, views: typing.Dict[str, View]
 ):
     resolved: list[tuple[ipywidgets.Widget, str]] = []
     for view_name, view_config in config.view_coordination.items():
@@ -67,15 +108,6 @@ def _resolve_scope_and_link(
     return links
 
 
-def _resolve_config(config_or_path: pathlib.Path | dict):
-    if isinstance(config_or_path, dict):
-        config = msgspec.convert(config_or_path, type=CoordinationConfig)
-    else:
-        contents = pathlib.Path(config_or_path).read_text(encoding="utf-8")
-        config = msgspec.json.decode(contents, type=CoordinationConfig)
-    return config
-
-
 WIDGET_COORDINATION_IDS = weakref.WeakKeyDictionary()
 # TODO: We should try to use weakrefs here as well
 LINKS = {}
@@ -89,31 +121,57 @@ class Coordination:
     using the use-coordination specification.
     """
 
-    def __init__(self, config: pathlib.Path | dict | None = None):
-        self._config = (
-            CoordinationConfig() if config is None else _resolve_config(config)
-        )
-        self._views: dict[str, View] = {}
+    def __init__(self, config: typing.Union[pathlib.Path, dict, None] = None) -> None:
+        if config is None:
+            self._config = CoordinationConfig()
+        elif isinstance(config, dict):
+            self._config = msgspec.convert(config, type=CoordinationConfig)
+        else:
+            contents = pathlib.Path(config).read_text(encoding="utf-8")
+            self._config = msgspec.json.decode(contents, type=CoordinationConfig)
+        self._views: typing.Dict[str, View] = {}
         self._unknown_view_id = 0
 
-    def use_widget(self, widget: ipywidgets.Widget, view_id: str, aliases: dict):
+    def use_widget(
+        self, widget: ipywidgets.Widget, view_id: str, aliases: dict
+    ) -> None:
+        """Register a widget as a view in the coordination space.
+
+        Parameters
+        ----------
+        widget : ipywidgets.Widget
+            The widget to be registered.
+        view_id : str
+            The view id of the widget.
+        aliases : dict
+            A dictionary mapping widget fields to coordination types in the
+            coordination space.
+        """
         self._views[view_id] = View(widget).alias(**aliases)
 
-    def type(self, type: str):
+    def type(self, type: str) -> "CoordinationTypeContext":
+        """Enter the coordination type context."""
         return CoordinationTypeContext(_coord=self, _type=type)
 
-    def __enter__(self):
+    def __enter__(self) -> "Coordination":
+        """Enter the coordination context."""
         return self
 
-    def __exit__(self, *args, **kwargs):
+    def __exit__(self, *_: object) -> None:
+        """Exit the coordination context.
+
+        This method is called when the context manager is exited. It will resolve the
+        coordination configuration and link any registered widgets together using the
+        coordination space.
+        """
         if len(self._views) == 0:
             return
 
         # widgets can only have one coordination at a time
         # so we need to remove the old links before creating new ones
-        coordination_ids = set(
+        coordination_ids = {
             WIDGET_COORDINATION_IDS.get(view.widget) for view in self._views.values()
-        )
+        }
         for coordination_id in coordination_ids:
             if LINKS.get(coordination_id) is not None:
                 for link in LINKS[coordination_id]:
@@ -132,8 +190,12 @@ class Coordination:
         for view in self._views.values():
             WIDGET_COORDINATION_IDS[view.widget] = id(self)
 
-    def to_json(self) -> bytes:
-        return msgspec.json.encode(self._config)
+    def to_json(self) -> str:
+        """Serialize the coordination configuration to use-coordination JSON format."""
+        return msgspec.json.encode(self._config).decode("utf-8")
+
+
+T = typing.TypeVar("T")
 
 
 @dataclasses.dataclass
@@ -142,12 +204,28 @@ class CoordinationTypeContext:
     _type: str
 
     def __enter__(self):
+        """Enter the coordination type context."""
         return self
 
-    def __exit__(self, *args, **kwargs):
+    def __exit__(self, *_: object):
+        """Exit the coordination type context."""
         pass
 
-    def scope(self, name: str, value: typing.Any):
+    def scope(self, name: str, value: T) -> "CoordinationScopeContext[T]":
+        """Enter the coordination scope context.
+
+        Parameters
+        ----------
+        name : str
+            The name of the coordination scope.
+        value : T
+            The value of the coordination scope.
+
+        Returns
+        -------
+        CoordinationScopeContext
+            The coordination scope context.
+        """
         self._coord._config.coordination_space[self._type] = (
             self._coord._config.coordination_space.get(self._type, {})
         )
@@ -155,9 +233,6 @@ class CoordinationTypeContext:
         return CoordinationScopeContext(
             _cood=self._coord, _type=self._type, _name=name, _value=value
         )
-
-
-T = typing.TypeVar("T")
 
 
 @dataclasses.dataclass
@@ -168,43 +243,68 @@ class CoordinationScopeContext(typing.Generic[T]):
     _value: T
 
     def __enter__(self):
+        """Enter the coordination scope context."""
         return self
 
-    def __exit__(self, *args, **kwargs):
+    def __exit__(self, *_: object):
+        """Exit the coordination scope context."""
         pass
 
     def view(
         self,
-        widget: ipywidgets.Widget | None,
-        id: str | None = None,
-        alias: str | None = None,
+        widget: typing.Union[ipywidgets.Widget, None] = None,
+        id: typing.Union[str, None] = None,
+        alias: typing.Union[str, None] = None,
     ):
+        """Register a widget as a view in the coordination space.
+
+        Parameters
+        ----------
+        widget : ipywidgets.Widget
+            The widget to be registered.
+        id : str
+            The view id of the widget.
+        alias : str
+            The alias of the widget field in the coordination space.
+
+        Raises
+        ------
+        ValueError
+            If neither widget nor id is provided.
+
+        Notes
+        -----
+        If only the widget is provided, the view id will be generated automatically in
+        the form of `view_{int}`.
+        """
         if widget is None and id is None:
             raise ValueError("Either widget or id must be provided")
 
-        if id is None:
+        view_id = id
+
+        if view_id is None:
             # Check if we have a for this widget already
-            for view_id, view in self._cood._views.items():
+            for vid, view in self._cood._views.items():
                 if view.widget == widget:
-                    id = view_id
+                    view_id = vid
                     break
             else:
                 # If not, create a new one
-                id = f"view_{self._cood._unknown_view_id}"
+                view_id = f"view_{self._cood._unknown_view_id}"
                 self._cood._unknown_view_id += 1
 
         # write to the view coordination config
-        self._cood._config.view_coordination[id] = (
-            self._cood._config.view_coordination.get(id, ViewCoordinationConfig())
+        self._cood._config.view_coordination[view_id] = (
+            self._cood._config.view_coordination.get(view_id, ViewCoordinationConfig())
         )
-        self._cood._config.view_coordination[id].coordination_scopes[self._type] = (
-            self._name
-        )
+        self._cood._config.view_coordination[view_id].coordination_scopes[
+            self._type
+        ] = self._name
 
         if widget is None:
             return
 
         # register the widget view
-        self._cood._views[id] = self._cood._views.get(id, View(widget))
+        self._cood._views[view_id] = self._cood._views.get(view_id, View(widget))
         if alias is not None:
-            self._cood._views[id].alias(**{alias: self._type})
+            self._cood._views[view_id].alias(**{alias: self._type})
