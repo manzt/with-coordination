@@ -14,8 +14,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-      - uses: eifinger/setup-rye@v2
-      - run: rye lint
+        with:
+          python-version: "3.12"
+      - run: |
+          pip install uv
+          uv pip install --system ruff
+          ruff lint
 
   Test:
     runs-on: ubuntu-latest
