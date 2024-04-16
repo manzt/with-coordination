@@ -1,6 +1,6 @@
 [project]
 name = "with-coordination"
-version = "0.1.0"
+version = "0.0.0"
 description = "Add your description here"
 authors = [{ name = "Trevor Manz", email = "trevor.j.manz@gmail.com" }]
 dependencies = ["ipywidgets>=8.1.2", "traitlets>=5.14.2", "msgspec>=0.18.6"]
