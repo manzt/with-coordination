@@ -19,7 +19,7 @@ jobs:
       - run: |
           pip install uv
           uv pip install --system ruff
-          ruff lint
+          ruff check
 
   Test:
     runs-on: ubuntu-latest
