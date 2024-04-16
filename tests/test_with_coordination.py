@@ -1,9 +1,15 @@
-import pathlib
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import pytest
 from inline_snapshot import snapshot
 from ipywidgets import FloatSlider
+
 from with_coordination import Coordination
+
+if TYPE_CHECKING:
+    import pathlib
 
 
 @pytest.fixture
