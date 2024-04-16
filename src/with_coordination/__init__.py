@@ -108,15 +108,6 @@ def _resolve_scope_and_link(
     return links
 
 
-def _resolve_config(config_or_path: pathlib.Path | dict):
-    if isinstance(config_or_path, dict):
-        config = msgspec.convert(config_or_path, type=CoordinationConfig)
-    else:
-        contents = pathlib.Path(config_or_path).read_text(encoding="utf-8")
-        config = msgspec.json.decode(contents, type=CoordinationConfig)
-    return config
-
-
 WIDGET_COORDINATION_IDS = weakref.WeakKeyDictionary()
 # TODO: We should try to use weakrefs here as well
 LINKS = {}
@@ -130,10 +121,14 @@ class Coordination:
     using the use-coordination specification.
     """
 
-    def __init__(self, config: pathlib.Path | dict | None = None) -> None:
-        self._config = (
-            CoordinationConfig() if config is None else _resolve_config(config)
-        )
+    def __init__(self, config: typing.Union[pathlib.Path, dict, None] = None) -> None:
+        if config is None:
+            self._config = CoordinationConfig()
+        elif isinstance(config, dict):
+            self._config = msgspec.convert(config, type=CoordinationConfig)
+        else:
+            contents = pathlib.Path(config).read_text(encoding="utf-8")
+            self._config = msgspec.json.decode(contents, type=CoordinationConfig)
         self._views: typing.Dict[str, View] = {}
         self._unknown_view_id = 0
 
@@ -257,9 +252,9 @@ class CoordinationScopeContext(typing.Generic[T]):
 
     def view(
         self,
-        widget: ipywidgets.Widget | None = None,
-        id: str | None = None,
-        alias: str | None = None,
+        widget: typing.Union[ipywidgets.Widget, None] = None,
+        id: typing.Union[str, None] = None,
+        alias: typing.Union[str, None] = None,
     ):
         """Register a widget as a view in the coordination space.
 
