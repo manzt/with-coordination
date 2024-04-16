@@ -1,5 +1,7 @@
 # with-coordination
 
+declarative coordinated multiple views for Jupyter Widgets
+
 ```sh
 pip install with-coordination
 ```
@@ -63,12 +65,31 @@ with Coordination("config.json") as c:
     c.use_widget(slider3, view_id="slider3", aliases={"value": "sliderValue"})
 ```
 
+## why
+
+Managing coordinated multiple views is a complex task. This library provides an
+ergonomic and declarative API to specify how widgets traits should be
+coordinated.
+
+**with-coordination** is based on the declarative JSON coordination
+specification from
+[`use-coordination`](https://github.com/keller-mark/use-coordination) and is
+designed to work with [anywidget](https://anywidget.dev).
+
 ## development
 
 this project is managed using [rye](https://rye-up.com/).
 
 ```py
 rye run jupyter lab
+```
+
+rye manages testing, linting, and formatting.
+
+```sh
+rye test
+rye lint
+rye format
 ```
 
 alternatively you can create a virtual environment and use an development installation. You will need to install `jupyterlab`.
