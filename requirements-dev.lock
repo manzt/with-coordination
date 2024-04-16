@@ -23,6 +23,7 @@ argon2-cffi-bindings==21.2.0
 arrow==1.3.0
     # via isoduration
 asttokens==2.4.1
+    # via inline-snapshot
     # via stack-data
 async-lru==2.0.4
     # via jupyterlab
@@ -33,6 +34,8 @@ babel==2.14.0
     # via jupyterlab-server
 beautifulsoup4==4.12.3
     # via nbconvert
+black==24.4.0
+    # via inline-snapshot
 bleach==6.1.0
     # via nbconvert
 certifi==2024.2.2
@@ -43,6 +46,9 @@ cffi==1.16.0
     # via argon2-cffi-bindings
 charset-normalizer==3.3.2
     # via requests
+click==8.1.7
+    # via black
+    # via inline-snapshot
 comm==0.2.2
     # via anywidget
     # via ipykernel
@@ -54,6 +60,7 @@ decorator==5.1.1
 defusedxml==0.7.1
     # via nbconvert
 executing==2.0.1
+    # via inline-snapshot
     # via stack-data
 fastjsonschema==2.19.1
     # via nbformat
@@ -70,6 +77,9 @@ idna==3.7
     # via httpx
     # via jsonschema
     # via requests
+iniconfig==2.0.0
+    # via pytest
+inline-snapshot==0.8.0
 ipykernel==6.29.4
     # via jupyterlab
 ipython==8.23.0
@@ -139,6 +149,8 @@ mistune==3.0.2
     # via nbconvert
 msgspec==0.18.6
     # via with-coordination
+mypy-extensions==1.0.0
+    # via black
 nbclient==0.10.0
     # via nbconvert
 nbconvert==7.16.3
@@ -154,19 +166,26 @@ notebook-shim==0.2.4
 overrides==7.7.0
     # via jupyter-server
 packaging==24.0
+    # via black
     # via ipykernel
     # via jupyter-server
     # via jupyterlab
     # via jupyterlab-server
     # via nbconvert
+    # via pytest
 pandocfilters==1.5.1
     # via nbconvert
 parso==0.8.4
     # via jedi
+pathspec==0.12.1
+    # via black
 pexpect==4.9.0
     # via ipython
 platformdirs==4.2.0
+    # via black
     # via jupyter-core
+pluggy==1.4.0
+    # via pytest
 prometheus-client==0.20.0
     # via jupyter-server
 prompt-toolkit==3.0.43
@@ -185,6 +204,7 @@ pycparser==2.22
 pygments==2.17.2
     # via ipython
     # via nbconvert
+pytest==8.1.1
 python-dateutil==2.9.0.post0
     # via arrow
     # via jupyter-client
@@ -230,6 +250,8 @@ terminado==0.18.1
     # via jupyter-server-terminals
 tinycss2==1.2.1
     # via nbconvert
+toml==0.10.2
+    # via inline-snapshot
 tornado==6.4
     # via ipykernel
     # via jupyter-client
@@ -253,6 +275,8 @@ traitlets==5.14.2
     # via with-coordination
 types-python-dateutil==2.9.0.20240316
     # via arrow
+types-toml==0.10.8.20240310
+    # via inline-snapshot
 typing-extensions==4.11.0
     # via anywidget
 uri-template==1.3.0

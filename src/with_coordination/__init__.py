@@ -105,7 +105,7 @@ class Coordination:
     def __enter__(self):
         return self
 
-    def __exit__(self, *args, **kwargs):
+    def __exit__(self, *_: object):
         if len(self._views) == 0:
             return
 
@@ -132,8 +132,8 @@ class Coordination:
         for view in self._views.values():
             WIDGET_COORDINATION_IDS[view.widget] = id(self)
 
-    def to_json(self) -> bytes:
-        return msgspec.json.encode(self._config)
+    def to_json(self) -> str:
+        return msgspec.json.encode(self._config).decode("utf-8")
 
 
 @dataclasses.dataclass
@@ -144,7 +144,7 @@ class CoordinationTypeContext:
     def __enter__(self):
         return self
 
-    def __exit__(self, *args, **kwargs):
+    def __exit__(self, *_: object):
         pass
 
     def scope(self, name: str, value: typing.Any):
@@ -170,12 +170,12 @@ class CoordinationScopeContext(typing.Generic[T]):
     def __enter__(self):
         return self
 
-    def __exit__(self, *args, **kwargs):
+    def __exit__(self, *_: object):
         pass
 
     def view(
         self,
-        widget: ipywidgets.Widget | None,
+        widget: ipywidgets.Widget | None = None,
         id: str | None = None,
         alias: str | None = None,
     ):
