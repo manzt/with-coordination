@@ -67,16 +67,21 @@ class CoordinationScope(msgspec.Struct):
 class View(msgspec.Struct):
     widget: ipywidgets.Widget
     aliases: typing.Dict[str, str] = {}
+    jslinks: typing.Set[str] = set()
 
     def alias(self, **kwargs):
         self.aliases.update({v: k for k, v in kwargs.items()})
+        return self
+
+    def jslink(self, field: str):
+        self.jslinks.add(field)
         return self
 
 
 def _resolve_scope_and_link(
     config: CoordinationConfig, scope: CoordinationScope, views: typing.Dict[str, View]
 ):
-    resolved: list[tuple[ipywidgets.Widget, str]] = []
+    resolved: list[tuple[ipywidgets.Widget, str, bool]] = []
     for view_name, view_config in config.view_coordination.items():
         view_scopes = view_config.coordination_scopes
         if scope.type not in view_scopes or scope.name not in view_scopes[scope.type]:
@@ -89,7 +94,7 @@ def _resolve_scope_and_link(
         # set the current value to the scope
         setattr(view.widget, field, scope.value)
         # keep the resolved so we can link them together
-        resolved.append((view.widget, field))
+        resolved.append((view.widget, field, field in view.jslinks))
 
     if len(resolved) == 0:
         return []
@@ -100,9 +105,12 @@ def _resolve_scope_and_link(
     # TODO: there probably is a better way to do this.
     # Ideally, on the Python side we have one "Model" for the scope
     # and on the JS side the same. But maybe for now this is fine...
-    v1, f1 = resolved[0]
-    for view, field in resolved[1:]:
-        link = ipywidgets.link((v1, f1), (view, field))
+    v1, f1, should_jslink1 = resolved[0]
+    for view, field, should_jslink in resolved[1:]:
+        if should_jslink1 and should_jslink:
+            link = ipywidgets.jslink((v1, f1), (view, field))
+        else:
+            link = ipywidgets.link((v1, f1), (view, field))
         links.append(link)
     return links
 
@@ -134,7 +142,11 @@ class Coordination:
         self._unknown_view_id = 0
 
     def use_widget(
-        self, widget: ipywidgets.Widget, view_id: str, aliases: dict
+        self,
+        widget: ipywidgets.Widget,
+        view_id: str,
+        aliases: typing.Union[typing.Dict[str, str], None] = None,
+        jslinks: typing.Union[typing.Set[str], None] = None,
     ) -> None:
         """Register a widget as a view in the coordination space.
 
@@ -144,15 +156,21 @@ class Coordination:
             The widget to be registered.
         view_id : str
             The view id of the widget.
-        aliases : dict
+        aliases : dict (optional)
             A dictionary mapping widget fields to coordination types in the
             coordination space.
+        jslinks : set (optional)
+            A set of widget fields that should be linked using ipywidgets.jslink.
         """
-        self._views[view_id] = View(widget).alias(**aliases)
+        self._views[view_id] = View(
+            widget,
+            jslinks=jslinks or set(),
+            aliases={v: k for k, v in (aliases or {}).items()},
+        )
 
-    def type(self, type: str) -> "CoordinationTypeContext":
+    def type(self, type: str, jslink: bool = False) -> "CoordinationTypeContext":
         """Enter the coordination type context."""
-        return CoordinationTypeContext(coordination=self, type=type)
+        return CoordinationTypeContext(coordination=self, type=type, jslink=jslink)
 
     def __enter__(self) -> "Coordination":
         """Enter the coordination context."""
@@ -200,9 +218,10 @@ T = typing.TypeVar("T")
 
 
 class CoordinationTypeContext:
-    def __init__(self, coordination: Coordination, type: str):
+    def __init__(self, coordination: Coordination, type: str, jslink: bool = False):
         self._coord = coordination
         self._type = type
+        self._jslink = jslink
 
     def __enter__(self):
         """Enter the coordination type context."""
@@ -212,7 +231,9 @@ class CoordinationTypeContext:
         """Exit the coordination type context."""
         pass
 
-    def scope(self, name: str, value: T) -> "CoordinationScopeContext[T]":
+    def scope(
+        self, name: str, value: T, jslink: bool = False
+    ) -> "CoordinationScopeContext[T]":
         """Enter the coordination scope context.
 
         Parameters
@@ -221,6 +242,8 @@ class CoordinationTypeContext:
             The name of the coordination scope.
         value : T
             The value of the coordination scope.
+        jslink : bool
+            Whether to use ipywidgets.jslink when linking views for this scope.
 
         Returns
         -------
@@ -232,16 +255,28 @@ class CoordinationTypeContext:
         )
         self._coord._config.coordination_space[self._type][name] = value
         return CoordinationScopeContext(
-            coordination=self._coord, type=self._type, name=name, value=value
+            coordination=self._coord,
+            type=self._type,
+            name=name,
+            value=value,
+            jslink=jslink or self._jslink,
         )
 
 
 class CoordinationScopeContext(typing.Generic[T]):
-    def __init__(self, coordination: Coordination, type: str, name: str, value: T):
+    def __init__(
+        self,
+        coordination: Coordination,
+        type: str,
+        name: str,
+        value: T,
+        jslink: bool,
+    ):
         self._coord = coordination
         self._type = type
         self._name = name
         self._value = value
+        self._jslink = jslink
 
     def __enter__(self):
         """Enter the coordination scope context."""
@@ -256,6 +291,7 @@ class CoordinationScopeContext(typing.Generic[T]):
         widget: typing.Union[ipywidgets.Widget, None] = None,
         id: typing.Union[str, None] = None,
         alias: typing.Union[str, None] = None,
+        jslink: bool = False,
     ):
         """Register a widget as a view in the coordination space.
 
@@ -267,6 +303,8 @@ class CoordinationScopeContext(typing.Generic[T]):
             The view id of the widget.
         alias : str
             The alias of the widget field in the coordination space.
+        jslink : bool
+            Whether to use ipywidgets.jslink to link this view this scope.
 
         Raises
         ------
@@ -307,5 +345,10 @@ class CoordinationScopeContext(typing.Generic[T]):
 
         # register the widget view
         self._coord._views[view_id] = self._coord._views.get(view_id, View(widget))
+
         if alias is not None:
             self._coord._views[view_id].alias(**{alias: self._type})
+
+        if jslink or self._jslink:
+            # tag the widget for jslinking later
+            self._coord._views[view_id].jslink(alias or self._type)

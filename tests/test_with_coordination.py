@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import pytest
 from inline_snapshot import snapshot
@@ -163,3 +164,38 @@ def test_add_widgets_to_existing_coordination(coordination_path: pathlib.Path):
     assert slider1.value == 0.6
     assert slider2.value == 0.8
     assert slider3.value == 0.8
+
+
+def test_jslink_for_type():
+    slider1 = FloatSlider()
+    slider2 = FloatSlider()
+
+    with patch("ipywidgets.jslink") as jslink:
+        with Coordination() as c:
+            with c.type("sliderValue", jslink=True) as t:
+                with t.scope("A", 10) as s:
+                    s.view(slider1, alias="value")
+                    s.view(slider2, alias="value")
+
+        assert jslink.call_count == 1
+
+
+def test_jslink_for_scope():
+    slider1 = FloatSlider()
+    slider2 = FloatSlider()
+
+    slider3 = FloatSlider()
+    slider4 = FloatSlider()
+
+    with patch("ipywidgets.jslink") as jslink:
+        with Coordination() as c:
+            with c.type("sliderValue") as t:
+                with t.scope("A", 10, jslink=True) as s:
+                    s.view(slider1, alias="value")
+                    s.view(slider2, alias="value")
+
+                with t.scope("B", 4.0) as s:
+                    s.view(slider3, alias="value")
+                    s.view(slider4, alias="value")
+
+        assert jslink.call_count == 1
