@@ -1,14 +1,14 @@
 [project]
 name = "with-coordination"
-version = "0.0.0"
-description = "Add your description here"
+dynamic = ["version"]
+description = "Declarative coordinated multiple views for Jupyter Widgets"
 authors = [{ name = "Trevor Manz", email = "trevor.j.manz@gmail.com" }]
 dependencies = ["ipywidgets>=8.1.2", "traitlets>=5.14.2", "msgspec>=0.18.6"]
 readme = "README.md"
 requires-python = ">= 3.8"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [tool.rye]
@@ -19,6 +19,9 @@ dev-dependencies = [
     "pytest>=8.1.1",
     "inline-snapshot>=0.8.0",
 ]
+
+[tool.hatch.version]
+source = "vcs"
 
 [tool.hatch.metadata]
 allow-direct-references = true
