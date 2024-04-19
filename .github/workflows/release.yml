@@ -9,6 +9,9 @@ jobs:
 
   Release:
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/with-coordination
     permissions:
       # IMPORTANT: this permission is mandatory for trusted publishing
       id-token: write
@@ -16,11 +19,11 @@ jobs:
       # ref: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
@@ -32,7 +35,7 @@ jobs:
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 18.x
       - run: npx changelogithub@0.12
